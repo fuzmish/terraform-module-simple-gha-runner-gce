@@ -95,29 +95,29 @@ resource "google_compute_instance_template" "this" {
   disk {
     auto_delete  = true
     boot         = true
-    disk_size_gb = var.instance_disk_size
-    disk_type    = var.instance_disk_type
-    source_image = var.instance_source_image
+    disk_size_gb = each.value.disk_size
+    disk_type    = each.value.disk_type
+    source_image = each.value.source_image
   }
   network_interface {
     network    = local.network_self_link
     subnetwork = local.subnetwork_self_link
 
     access_config {
-      network_tier = var.instance_access_config_network_tier
+      network_tier = each.value.access_config_network_tier
     }
   }
   scheduling {
     automatic_restart           = each.value.spot ? false : null
-    instance_termination_action = var.instance_max_run_duration_seconds != null || each.value.spot ? "DELETE" : null
+    instance_termination_action = each.value.max_run_duration_seconds != null || each.value.spot ? "DELETE" : null
     on_host_maintenance         = each.value.spot ? "TERMINATE" : null
     preemptible                 = each.value.spot
     provisioning_model          = each.value.spot ? "SPOT" : "STANDARD"
 
     dynamic "max_run_duration" {
-      for_each = var.instance_max_run_duration_seconds != null ? [1] : []
+      for_each = each.value.max_run_duration_seconds != null ? [1] : []
       content {
-        seconds = var.instance_max_run_duration_seconds
+        seconds = each.value.max_run_duration_seconds
       }
     }
   }
@@ -126,9 +126,9 @@ resource "google_compute_instance_template" "this" {
     scopes = var.instance_service_account_scopes
   }
   shielded_instance_config {
-    enable_integrity_monitoring = var.instance_enable_integrity_monitoring
-    enable_secure_boot          = var.instance_enable_secure_boot
-    enable_vtpm                 = var.instance_enable_vtpm
+    enable_integrity_monitoring = each.value.enable_integrity_monitoring
+    enable_secure_boot          = each.value.enable_secure_boot
+    enable_vtpm                 = each.value.enable_vtpm
   }
 }
 

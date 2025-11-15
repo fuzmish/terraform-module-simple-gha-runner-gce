@@ -43,53 +43,10 @@ variable "instance_zones" {
   default     = null
 }
 
-variable "instance_source_image" {
-  type        = string
-  description = "Source image for VM instances"
-  default     = "projects/debian-cloud/global/images/family/debian-12"
-}
-
-variable "instance_templates" {
-  type = list(object({
-    labels          = list(string)
-    machine_type    = string
-    spot            = optional(bool, false)
-    zones           = optional(list(string))
-    group_id        = optional(number, 1)
-    startup_script  = optional(string)
-  }))
-  description = "VM template configurations: runner label list (all labels must match requests), machine type, spot flag, optional override zones, optional runner group ID (default: 1), and optional startup script (null uses default)"
-  default = [
-    {
-      labels       = ["default"]
-      machine_type = "t2d-standard-1"
-      spot         = true
-    }
-  ]
-}
-
 variable "instance_name_prefix" {
   type        = string
   description = "Prefix for VM instance names created from webhook"
   default     = "gha-runner"
-}
-
-variable "instance_disk_type" {
-  type        = string
-  description = "Boot disk type for runner VMs"
-  default     = "pd-standard"
-}
-
-variable "instance_disk_size" {
-  type        = number
-  description = "Boot disk size in GB for runner VMs"
-  default     = 10
-}
-
-variable "instance_access_config_network_tier" {
-  type        = string
-  description = "Network tier for external IP access"
-  default     = "STANDARD"
 }
 
 variable "instance_service_account_scopes" {
@@ -98,29 +55,31 @@ variable "instance_service_account_scopes" {
   default     = ["https://www.googleapis.com/auth/cloud-platform"]
 }
 
-variable "instance_max_run_duration_seconds" {
-  type        = number
-  nullable    = true
-  description = "Max runtime for Spot VMs (null allows indefinite runtime)"
-  default     = 600
-}
-
-variable "instance_enable_integrity_monitoring" {
-  type        = bool
-  description = "Enable integrity monitoring for shielded VM instances"
-  default     = true
-}
-
-variable "instance_enable_secure_boot" {
-  type        = bool
-  description = "Enable secure boot for shielded VM instances"
-  default     = true
-}
-
-variable "instance_enable_vtpm" {
-  type        = bool
-  description = "Enable vTPM for shielded VM instances"
-  default     = true
+variable "instance_templates" {
+  type = map(object({
+    labels                      = list(string)
+    machine_type                = string
+    spot                        = optional(bool, false)
+    zones                       = optional(list(string))
+    group_id                    = optional(number, 1)
+    startup_script              = optional(string)
+    source_image                = optional(string, "projects/debian-cloud/global/images/family/debian-12")
+    disk_type                   = optional(string, "pd-standard")
+    disk_size                   = optional(number, 10)
+    access_config_network_tier  = optional(string, "STANDARD")
+    max_run_duration_seconds    = optional(number, 600)
+    enable_integrity_monitoring = optional(bool, true)
+    enable_secure_boot          = optional(bool, true)
+    enable_vtpm                 = optional(bool, true)
+  }))
+  description = "VM template configurations with individual settings per template"
+  default = {
+    default = {
+      labels       = ["default"]
+      machine_type = "t2d-standard-1"
+      spot         = true
+    }
+  }
 }
 
 variable "function_available_cpu" {

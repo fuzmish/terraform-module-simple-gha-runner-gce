@@ -25,8 +25,8 @@ locals {
   EOT
 
   instance_templates = {
-    for template in var.instance_templates :
-    substr(sha1(jsonencode(template)), 0, 7) => merge(template, {
+    for key, template in var.instance_templates :
+    key => merge(template, {
       startup_script = coalesce(template.startup_script, local.default_startup_script)
     })
   }

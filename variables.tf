@@ -104,6 +104,24 @@ variable "instance_max_run_duration_seconds" {
   default     = 600
 }
 
+variable "instance_enable_integrity_monitoring" {
+  type        = bool
+  description = "Enable integrity monitoring for shielded VM instances"
+  default     = true
+}
+
+variable "instance_enable_secure_boot" {
+  type        = bool
+  description = "Enable secure boot for shielded VM instances"
+  default     = true
+}
+
+variable "instance_enable_vtpm" {
+  type        = bool
+  description = "Enable vTPM for shielded VM instances"
+  default     = true
+}
+
 variable "function_available_cpu" {
   type        = string
   description = "CPU allocation for webhook function"

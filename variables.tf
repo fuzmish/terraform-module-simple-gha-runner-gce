@@ -51,13 +51,14 @@ variable "instance_source_image" {
 
 variable "instance_templates" {
   type = list(object({
-    labels       = list(string)
-    machine_type = string
-    spot         = optional(bool, false)
-    zones        = optional(list(string))
-    group_id     = optional(number, 1)
+    labels          = list(string)
+    machine_type    = string
+    spot            = optional(bool, false)
+    zones           = optional(list(string))
+    group_id        = optional(number, 1)
+    startup_script  = optional(string)
   }))
-  description = "VM template configurations: runner label list (all labels must match requests), machine type, spot flag, optional override zones, and optional runner group ID (default: 1)"
+  description = "VM template configurations: runner label list (all labels must match requests), machine type, spot flag, optional override zones, optional runner group ID (default: 1), and optional startup script (null uses default)"
   default = [
     {
       labels       = ["default"]
@@ -65,13 +66,6 @@ variable "instance_templates" {
       spot         = true
     }
   ]
-}
-
-variable "instance_startup_script" {
-  type        = string
-  nullable    = true
-  description = "Startup script for VM instances (null uses default script)"
-  default     = null
 }
 
 variable "instance_name_prefix" {

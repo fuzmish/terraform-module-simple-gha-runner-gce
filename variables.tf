@@ -67,6 +67,13 @@ variable "instance_templates" {
   ]
 }
 
+variable "instance_startup_script" {
+  type        = string
+  nullable    = true
+  description = "Startup script for VM instances (null uses default script)"
+  default     = null
+}
+
 variable "instance_name_prefix" {
   type        = string
   description = "Prefix for VM instance names created from webhook"
@@ -102,6 +109,24 @@ variable "instance_max_run_duration_seconds" {
   nullable    = true
   description = "Max runtime for Spot VMs (null allows indefinite runtime)"
   default     = 600
+}
+
+variable "instance_enable_integrity_monitoring" {
+  type        = bool
+  description = "Enable integrity monitoring for shielded VM instances"
+  default     = true
+}
+
+variable "instance_enable_secure_boot" {
+  type        = bool
+  description = "Enable secure boot for shielded VM instances"
+  default     = true
+}
+
+variable "instance_enable_vtpm" {
+  type        = bool
+  description = "Enable vTPM for shielded VM instances"
+  default     = true
 }
 
 variable "function_available_cpu" {

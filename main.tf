@@ -54,28 +54,10 @@ resource "google_project_iam_custom_role" "this" {
   count = var.function_iam_roles == null ? 1 : 0
 
   description = "Minimum permissions to create VM instances for GitHub Actions runners"
+  permissions = var.instance_creator_custom_role_permissions
   project     = local.project
   role_id     = local.instance_creator_custom_role_id
   title       = "GitHub Actions Runner VM Creator"
-
-  permissions = [
-    "compute.disks.create",
-    "compute.instanceTemplates.get",
-    "compute.instanceTemplates.list",
-    "compute.instanceTemplates.useReadOnly",
-    "compute.instances.create",
-    "compute.instances.get",
-    "compute.instances.setLabels",
-    "compute.instances.setMetadata",
-    "compute.instances.setServiceAccount",
-    "compute.instances.setTags",
-    "compute.networks.get",
-    "compute.networks.list",
-    "compute.subnetworks.get",
-    "compute.subnetworks.list",
-    "compute.subnetworks.use",
-    "compute.subnetworks.useExternalIp"
-  ]
 }
 
 resource "google_service_account_iam_member" "this" {
@@ -87,36 +69,37 @@ resource "google_service_account_iam_member" "this" {
 resource "google_compute_instance_template" "this" {
   for_each = local.instance_templates
 
-  machine_type = each.value.machine_type
-  name         = "${var.resource_basename}-${each.key}"
-  project      = local.project
+  machine_type            = each.value.machine_type
+  metadata_startup_script = each.value.startup_script
+  name                    = "${var.resource_basename}-${each.key}"
+  project                 = local.project
 
   disk {
     auto_delete  = true
     boot         = true
-    disk_size_gb = var.instance_disk_size
-    disk_type    = var.instance_disk_type
-    source_image = var.instance_source_image
+    disk_size_gb = each.value.disk_size
+    disk_type    = each.value.disk_type
+    source_image = each.value.source_image
   }
   network_interface {
     network    = local.network_self_link
     subnetwork = local.subnetwork_self_link
 
     access_config {
-      network_tier = var.instance_access_config_network_tier
+      network_tier = each.value.access_config_network_tier
     }
   }
   scheduling {
     automatic_restart           = each.value.spot ? false : null
-    instance_termination_action = var.instance_max_run_duration_seconds != null || each.value.spot ? "DELETE" : null
+    instance_termination_action = each.value.max_run_duration_seconds != null || each.value.spot ? "DELETE" : null
     on_host_maintenance         = each.value.spot ? "TERMINATE" : null
     preemptible                 = each.value.spot
     provisioning_model          = each.value.spot ? "SPOT" : "STANDARD"
 
     dynamic "max_run_duration" {
-      for_each = var.instance_max_run_duration_seconds != null ? [1] : []
+      for_each = each.value.max_run_duration_seconds != null ? [1] : []
       content {
-        seconds = var.instance_max_run_duration_seconds
+        seconds = each.value.max_run_duration_seconds
       }
     }
   }
@@ -125,33 +108,10 @@ resource "google_compute_instance_template" "this" {
     scopes = var.instance_service_account_scopes
   }
   shielded_instance_config {
-    enable_integrity_monitoring = true
-    enable_secure_boot          = true
-    enable_vtpm                 = true
+    enable_integrity_monitoring = each.value.enable_integrity_monitoring
+    enable_secure_boot          = each.value.enable_secure_boot
+    enable_vtpm                 = each.value.enable_vtpm
   }
-
-  metadata_startup_script = <<-EOT
-  #!/bin/bash
-  set -euo pipefail
-  trap 'shutdown -h now' EXIT
-
-  function get_instance_metadata() {
-    curl -sSf \
-      -H "Metadata-Flavor: Google" \
-      "http://metadata.google.internal/computeMetadata/v1/instance/attributes/$1"
-  }
-  ENCODED_JIT_CONFIG="$(get_instance_metadata encoded_jit_config)"
-  RUNNER_VERSION="$(get_instance_metadata runner_version)"
-  if [ -z "$ENCODED_JIT_CONFIG" ] || [ -z "$RUNNER_VERSION" ]; then
-    echo "Required runner metadata is missing" >&2
-    exit 1
-  fi
-  useradd -m -s /bin/bash runner
-  cd /home/runner
-  sudo -u runner curl -sS -o actions-runner.tar.gz -L "https://github.com/actions/runner/releases/download/v$RUNNER_VERSION/actions-runner-linux-x64-$RUNNER_VERSION.tar.gz"
-  sudo -u runner tar xzf actions-runner.tar.gz
-  sudo -u runner ./run.sh --jitconfig "$ENCODED_JIT_CONFIG"
-  EOT
 }
 
 resource "google_secret_manager_secret" "this" {

@@ -44,13 +44,13 @@ module "gce_gha_runner" {
   resource_basename = "gha-runner"
   runner_scope      = "repository"  # or "organization"
 
-  instance_templates = [
-    {
+  instance_templates = {
+    default = {
       labels       = ["default"]
       machine_type = "t2d-standard-1"
       spot         = true
     }
-  ]
+  }
 }
 
 output "gha_runner_webhook_url" {
@@ -206,16 +206,12 @@ No modules.
 | <a name="input_function_max_instance_count"></a> [function\_max\_instance\_count](#input\_function\_max\_instance\_count) | Maximum concurrent instances for webhook function | `number` | `5` | no |
 | <a name="input_function_storage_bucket"></a> [function\_storage\_bucket](#input\_function\_storage\_bucket) | GCS bucket for webhook function code (null uses <project\_id>\_cloudbuild). Ensure that the bucket is already created. | `string` | `null` | no |
 | <a name="input_function_timeout_seconds"></a> [function\_timeout\_seconds](#input\_function\_timeout\_seconds) | Timeout for webhook function invocation | `number` | `300` | no |
-| <a name="input_instance_access_config_network_tier"></a> [instance\_access\_config\_network\_tier](#input\_instance\_access\_config\_network\_tier) | Network tier for external IP access | `string` | `"STANDARD"` | no |
 | <a name="input_instance_creator_custom_role_id"></a> [instance\_creator\_custom\_role\_id](#input\_instance\_creator\_custom\_role\_id) | Custom IAM role ID for webhook to create runner VMs | `string` | `null` | no |
-| <a name="input_instance_disk_size"></a> [instance\_disk\_size](#input\_instance\_disk\_size) | Boot disk size in GB for runner VMs | `number` | `10` | no |
-| <a name="input_instance_disk_type"></a> [instance\_disk\_type](#input\_instance\_disk\_type) | Boot disk type for runner VMs | `string` | `"pd-standard"` | no |
+| <a name="input_instance_creator_custom_role_permissions"></a> [instance\_creator\_custom\_role\_permissions](#input\_instance\_creator\_custom\_role\_permissions) | Permissions for custom IAM role for webhook to create runner VMs | `list(string)` | <pre>[<br/>  "compute.disks.create",<br/>  "compute.images.useReadOnly",<br/>  "compute.instanceTemplates.get",<br/>  "compute.instanceTemplates.list",<br/>  "compute.instanceTemplates.useReadOnly",<br/>  "compute.instances.create",<br/>  "compute.instances.get",<br/>  "compute.instances.setLabels",<br/>  "compute.instances.setMetadata",<br/>  "compute.instances.setServiceAccount",<br/>  "compute.instances.setTags",<br/>  "compute.networks.get",<br/>  "compute.networks.list",<br/>  "compute.subnetworks.get",<br/>  "compute.subnetworks.list",<br/>  "compute.subnetworks.use",<br/>  "compute.subnetworks.useExternalIp"<br/>]</pre> | no |
 | <a name="input_instance_iam_roles"></a> [instance\_iam\_roles](#input\_instance\_iam\_roles) | IAM roles for runner VM service account (null uses defaults: logging.logWriter, monitoring.metricWriter) | `list(string)` | `null` | no |
-| <a name="input_instance_max_run_duration_seconds"></a> [instance\_max\_run\_duration\_seconds](#input\_instance\_max\_run\_duration\_seconds) | Max runtime for Spot VMs (null allows indefinite runtime) | `number` | `600` | no |
 | <a name="input_instance_name_prefix"></a> [instance\_name\_prefix](#input\_instance\_name\_prefix) | Prefix for VM instance names created from webhook | `string` | `"gha-runner"` | no |
 | <a name="input_instance_service_account_scopes"></a> [instance\_service\_account\_scopes](#input\_instance\_service\_account\_scopes) | OAuth scopes for runner VM service account | `list(string)` | <pre>[<br/>  "https://www.googleapis.com/auth/cloud-platform"<br/>]</pre> | no |
-| <a name="input_instance_source_image"></a> [instance\_source\_image](#input\_instance\_source\_image) | Source image for VM instances | `string` | `"projects/debian-cloud/global/images/family/debian-12"` | no |
-| <a name="input_instance_templates"></a> [instance\_templates](#input\_instance\_templates) | VM template configurations: runner label list (all labels must match requests), machine type, spot flag, optional override zones, and optional runner group ID (default: 1) | <pre>list(object({<br/>    labels       = list(string)<br/>    machine_type = string<br/>    spot         = optional(bool, false)<br/>    zones        = optional(list(string))<br/>    group_id     = optional(number, 1)<br/>  }))</pre> | <pre>[<br/>  {<br/>    "labels": [<br/>      "default"<br/>    ],<br/>    "machine_type": "t2d-standard-1",<br/>    "spot": true<br/>  }<br/>]</pre> | no |
+| <a name="input_instance_templates"></a> [instance\_templates](#input\_instance\_templates) | VM template configurations with individual settings per template | <pre>map(object({<br/>    labels                      = list(string)<br/>    machine_type                = string<br/>    spot                        = optional(bool, false)<br/>    zones                       = optional(list(string))<br/>    group_id                    = optional(number, 1)<br/>    startup_script              = optional(string)<br/>    source_image                = optional(string, "projects/debian-cloud/global/images/family/debian-12")<br/>    disk_type                   = optional(string, "pd-standard")<br/>    disk_size                   = optional(number, 10)<br/>    access_config_network_tier  = optional(string, "STANDARD")<br/>    max_run_duration_seconds    = optional(number, 600)<br/>    enable_integrity_monitoring = optional(bool, true)<br/>    enable_secure_boot          = optional(bool, true)<br/>    enable_vtpm                 = optional(bool, true)<br/>  }))</pre> | <pre>{<br/>  "default": {<br/>    "labels": [<br/>      "default"<br/>    ],<br/>    "machine_type": "t2d-standard-1",<br/>    "spot": true<br/>  }<br/>}</pre> | no |
 | <a name="input_instance_zones"></a> [instance\_zones](#input\_instance\_zones) | Zones for VM placement (null auto-detects all available zones in region) | `list(string)` | `null` | no |
 | <a name="input_network_self_link"></a> [network\_self\_link](#input\_network\_self\_link) | Existing VPC network self\_link to reuse (null creates a new network) | `string` | `null` | no |
 | <a name="input_project"></a> [project](#input\_project) | GCP project ID (null auto-detects from provider) | `string` | `null` | no |

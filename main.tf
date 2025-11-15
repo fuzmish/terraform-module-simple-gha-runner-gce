@@ -87,9 +87,10 @@ resource "google_service_account_iam_member" "this" {
 resource "google_compute_instance_template" "this" {
   for_each = local.instance_templates
 
-  machine_type = each.value.machine_type
-  name         = "${var.resource_basename}-${each.key}"
-  project      = local.project
+  machine_type            = each.value.machine_type
+  metadata_startup_script = local.metadata_startup_script
+  name                    = "${var.resource_basename}-${each.key}"
+  project                 = local.project
 
   disk {
     auto_delete  = true
@@ -125,33 +126,10 @@ resource "google_compute_instance_template" "this" {
     scopes = var.instance_service_account_scopes
   }
   shielded_instance_config {
-    enable_integrity_monitoring = true
-    enable_secure_boot          = true
-    enable_vtpm                 = true
+    enable_integrity_monitoring = var.instance_enable_integrity_monitoring
+    enable_secure_boot          = var.instance_enable_secure_boot
+    enable_vtpm                 = var.instance_enable_vtpm
   }
-
-  metadata_startup_script = <<-EOT
-  #!/bin/bash
-  set -euo pipefail
-  trap 'shutdown -h now' EXIT
-
-  function get_instance_metadata() {
-    curl -sSf \
-      -H "Metadata-Flavor: Google" \
-      "http://metadata.google.internal/computeMetadata/v1/instance/attributes/$1"
-  }
-  ENCODED_JIT_CONFIG="$(get_instance_metadata encoded_jit_config)"
-  RUNNER_VERSION="$(get_instance_metadata runner_version)"
-  if [ -z "$ENCODED_JIT_CONFIG" ] || [ -z "$RUNNER_VERSION" ]; then
-    echo "Required runner metadata is missing" >&2
-    exit 1
-  fi
-  useradd -m -s /bin/bash runner
-  cd /home/runner
-  sudo -u runner curl -sS -o actions-runner.tar.gz -L "https://github.com/actions/runner/releases/download/v$RUNNER_VERSION/actions-runner-linux-x64-$RUNNER_VERSION.tar.gz"
-  sudo -u runner tar xzf actions-runner.tar.gz
-  sudo -u runner ./run.sh --jitconfig "$ENCODED_JIT_CONFIG"
-  EOT
 }
 
 resource "google_secret_manager_secret" "this" {

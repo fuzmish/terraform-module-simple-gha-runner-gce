@@ -88,7 +88,7 @@ resource "google_compute_instance_template" "this" {
   for_each = local.instance_templates
 
   machine_type            = each.value.machine_type
-  metadata_startup_script = local.metadata_startup_script
+  metadata_startup_script = each.value.startup_script
   name                    = "${var.resource_basename}-${each.key}"
   project                 = local.project
 

@@ -23,11 +23,12 @@ locals {
   sudo -u runner tar xzf actions-runner.tar.gz
   sudo -u runner ./run.sh --jitconfig "$ENCODED_JIT_CONFIG"
   EOT
-  metadata_startup_script = coalesce(var.instance_startup_script, local.default_startup_script)
 
   instance_templates = {
     for template in var.instance_templates :
-    substr(sha1(jsonencode(template)), 0, 7) => template
+    substr(sha1(jsonencode(template)), 0, 7) => merge(template, {
+      startup_script = coalesce(template.startup_script, local.default_startup_script)
+    })
   }
 
   function_storage_bucket = coalesce(var.function_storage_bucket, "${local.project}_cloudbuild")

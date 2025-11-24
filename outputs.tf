@@ -1,13 +1,3 @@
-output "network_id" {
-  value       = local.network_id
-  description = "VPC network ID"
-}
-
-output "subnet_id" {
-  value       = local.subnetwork_id
-  description = "Subnet ID"
-}
-
 output "instance_service_account" {
   value = {
     email  = google_service_account.instance.email

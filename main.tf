@@ -11,25 +11,6 @@ terraform {
   }
 }
 
-resource "google_compute_network" "this" {
-  count = var.network_self_link == null ? 1 : 0
-
-  auto_create_subnetworks = false
-  name                    = var.resource_basename
-  project                 = local.project
-}
-
-resource "google_compute_subnetwork" "this" {
-  count = var.subnetwork_self_link == null ? 1 : 0
-
-  ip_cidr_range            = var.subnet_ip_cidr_range
-  name                     = "${var.resource_basename}-${var.region}"
-  network                  = var.network_self_link != null ? var.network_self_link : google_compute_network.this[0].id
-  private_ip_google_access = true
-  project                  = local.project
-  region                   = var.region
-}
-
 resource "google_service_account" "instance" {
   account_id   = "${var.resource_basename}-instance"
   display_name = "${var.resource_basename}-instance"
@@ -51,12 +32,12 @@ resource "google_project_iam_member" "this" {
 }
 
 resource "google_project_iam_custom_role" "this" {
-  count = var.function_iam_roles == null ? 1 : 0
+  count = var.instance_creator_custom_role_id != null ? 1 : 0
 
   description = "Minimum permissions to create VM instances for GitHub Actions runners"
   permissions = var.instance_creator_custom_role_permissions
   project     = local.project
-  role_id     = local.instance_creator_custom_role_id
+  role_id     = var.instance_creator_custom_role_id
   title       = "GitHub Actions Runner VM Creator"
 }
 
@@ -67,10 +48,10 @@ resource "google_service_account_iam_member" "this" {
 }
 
 resource "google_compute_instance_template" "this" {
-  for_each = local.instance_templates
+  for_each = var.instance_templates
 
   machine_type            = each.value.machine_type
-  metadata_startup_script = each.value.startup_script
+  metadata_startup_script = coalesce(each.value.startup_script, replace(local.default_startup_script, "$RUNNER_VERSION", each.value.runner_version))
   name                    = "${var.resource_basename}-${each.key}"
   project                 = local.project
 
@@ -82,8 +63,7 @@ resource "google_compute_instance_template" "this" {
     source_image = each.value.source_image
   }
   network_interface {
-    network    = local.network_self_link
-    subnetwork = local.subnetwork_self_link
+    subnetwork = each.value.subnetwork
 
     access_config {
       network_tier = each.value.access_config_network_tier
@@ -132,12 +112,12 @@ resource "google_secret_manager_secret_iam_member" "this" {
 
 resource "google_storage_bucket_object" "this" {
   bucket = data.google_storage_bucket.this.name
-  name   = ".terraform/${var.region}/${local.function_name}-${data.archive_file.this.output_sha}.zip"
+  name   = ".terraform/${var.function_location}/${local.function_name}-${data.archive_file.this.output_sha}.zip"
   source = data.archive_file.this.output_path
 }
 
 resource "google_cloudfunctions2_function" "this" {
-  location = var.region
+  location = var.function_location
   name     = local.function_name
   project  = local.project
 
@@ -168,7 +148,7 @@ resource "google_cloudfunctions2_function" "this" {
 resource "google_cloud_run_service_iam_member" "this" {
   location = google_cloudfunctions2_function.this.location
   member   = "allUsers"
-  project  = local.project
+  project  = google_cloudfunctions2_function.this.project
   role     = "roles/run.invoker"
   service  = google_cloudfunctions2_function.this.service_config[0].service
 }

@@ -111,11 +111,10 @@ def generate_jit_config(
 
 
 def create_runner(
-    encoded_jit_config: str,
     instance_name: str,
     instance_template_name: str,
     instance_zones: list[str],
-    runner_version: str,
+    jit_config: str,
     project: str,
 ) -> None:
     instances_client = compute_v1beta.InstancesClient()
@@ -130,8 +129,7 @@ def create_runner(
     metadata = compute_v1beta.Metadata()
     metadata.items = [
         *(instance_template.properties.metadata.items or []),
-        compute_v1beta.Items(key="encoded_jit_config", value=encoded_jit_config),
-        compute_v1beta.Items(key="runner_version", value=runner_version),
+        compute_v1beta.Items(key="jit-config", value=jit_config),
     ]
 
     instance = compute_v1beta.Instance()
@@ -164,7 +162,6 @@ def main(request: Request):
     INSTANCE_TEMPLATES = json.loads(os.environ["INSTANCE_TEMPLATES"])
     PROJECT = os.environ["PROJECT"]
     RUNNER_SCOPE = os.environ["RUNNER_SCOPE"]
-    RUNNER_VERSION = os.environ["RUNNER_VERSION"]
 
     # Load GitHub App credentials from Secret Manager
     config = get_config_secret(PROJECT, CONFIG_SECRET_ID)
@@ -207,7 +204,7 @@ def main(request: Request):
     for template in templates:
         try:
             # Generate JIT config and create runner
-            encoded_jit_config = generate_jit_config(
+            jit_config = generate_jit_config(
                 app_id=config["app_id"],
                 app_private_key=config["app_private_key"],
                 request_payload=payload,
@@ -217,12 +214,11 @@ def main(request: Request):
                 runner_scope=RUNNER_SCOPE,
             )
             create_runner(
-                encoded_jit_config=encoded_jit_config,
                 instance_name=instance_name,
                 instance_template_name=template["template_name"],
                 instance_zones=template["zones"],
+                jit_config=jit_config,
                 project=PROJECT,
-                runner_version=RUNNER_VERSION,
             )
             return "OK"
         except Exception as e:

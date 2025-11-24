@@ -5,42 +5,10 @@ variable "project" {
   default     = null
 }
 
-variable "region" {
-  type        = string
-  description = "GCP region for webhook function and auto-detection of zones"
-}
-
 variable "resource_basename" {
   type        = string
   description = "Base name for all resources (network, subnet, VMs, function, etc.)"
   default     = "gha-runner"
-}
-
-variable "network_self_link" {
-  type        = string
-  nullable    = true
-  description = "Existing VPC network self_link to reuse (null creates a new network)"
-  default     = null
-}
-
-variable "subnet_ip_cidr_range" {
-  type        = string
-  description = "CIDR range for the subnet"
-  default     = "10.0.0.0/24"
-}
-
-variable "subnetwork_self_link" {
-  type        = string
-  nullable    = true
-  description = "Existing subnet self_link to reuse (null creates a new subnet)"
-  default     = null
-}
-
-variable "instance_zones" {
-  type        = list(string)
-  nullable    = true
-  description = "Zones for VM placement (null auto-detects all available zones in region)"
-  default     = null
 }
 
 variable "instance_name_prefix" {
@@ -58,12 +26,13 @@ variable "instance_service_account_scopes" {
 variable "instance_templates" {
   type = map(object({
     labels                      = list(string)
+    subnetwork                  = string # subnetwork ID
     machine_type                = string
     spot                        = optional(bool, false)
     zones                       = optional(list(string))
     group_id                    = optional(number, 1)
     startup_script              = optional(string)
-    source_image                = optional(string, "projects/debian-cloud/global/images/family/debian-12")
+    source_image                = optional(string, "debian-12")
     disk_type                   = optional(string, "pd-standard")
     disk_size                   = optional(number, 10)
     access_config_network_tier  = optional(string, "STANDARD")
@@ -71,15 +40,21 @@ variable "instance_templates" {
     enable_integrity_monitoring = optional(bool, true)
     enable_secure_boot          = optional(bool, true)
     enable_vtpm                 = optional(bool, true)
+    runner_version              = optional(string, "2.330.0")
   }))
   description = "VM template configurations with individual settings per template"
-  default = {
-    default = {
-      labels       = ["default"]
-      machine_type = "t2d-standard-1"
-      spot         = true
-    }
-  }
+}
+
+variable "function_name" {
+  type        = string
+  nullable    = true
+  description = "Name of the webhook function"
+  default     = null
+}
+
+variable "function_location" {
+  type        = string
+  description = "GCP location to deploy webhook function"
 }
 
 variable "function_available_cpu" {
@@ -130,7 +105,7 @@ variable "instance_creator_custom_role_id" {
   type        = string
   nullable    = true
   description = "Custom IAM role ID for webhook to create runner VMs"
-  default     = null
+  default     = "compute.ghaRunnerCreator"
 }
 
 variable "instance_creator_custom_role_permissions" {
@@ -180,10 +155,4 @@ variable "runner_scope" {
     condition     = contains(["repository", "organization"], var.runner_scope)
     error_message = "runner_scope must be 'repository' or 'organization'."
   }
-}
-
-variable "runner_version" {
-  type        = string
-  description = "GitHub Actions runner version to install on VMs (must support JIT config, v2.303.0 or later)"
-  default     = "2.329.0"
 }
